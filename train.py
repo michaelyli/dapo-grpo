@@ -33,6 +33,7 @@ def load_train_dataset():
 def load_eval_dataset():
     ds = load_dataset("HuggingFaceH4/MATH-500", split="test")
     ds = ds.rename_column("problem", "prompt")
+    ds = ds.remove_columns("solution")
     ds = ds.rename_column("answer", "solution")
     ds = ds.map(build_prompt)
     return ds
