@@ -14,7 +14,7 @@ accelerate launch \
     --num_processes 8 \
     --mixed_precision bf16 \
     train.py \
-    --model_name_or_path Qwen/Qwen3-1.7B \
+    --model_name_or_path Qwen/Qwen3-1.7B-Base \
     --output_dir ./output \
     --learning_rate 1e-6 \
     --num_generations 8 \

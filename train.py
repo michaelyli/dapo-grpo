@@ -3,46 +3,44 @@
 import argparse
 
 from datasets import load_dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM
 from trl import GRPOConfig, GRPOTrainer
 
 from rewards import accuracy_reward
 
-SYSTEM_PROMPT = "You are a helpful assistant."
-INSTRUCTION_SUFFIX = "Let's think step by step and output the final answer within \\boxed{}."
+BASIC_SOLVE_PROMPT = """
+Question:
+{question}
+
+---
+Please reason step by step to solve the question above and put final answer within \\boxed{{}}.
+""".strip()
 
 
-def build_prompt(example, tokenizer):
-    """Build a chat-templated prompt from a raw problem string."""
-    content = example["prompt"] + "\n\n" + INSTRUCTION_SUFFIX
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": content},
-    ]
-    example["prompt"] = tokenizer.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True
-    )
+def build_prompt(example):
+    """Build a plain-text prompt for a base model."""
+    example["prompt"] = BASIC_SOLVE_PROMPT.format(question=example["prompt"])
     return example
 
 
-def load_train_dataset(tokenizer):
+def load_train_dataset():
     ds = load_dataset("ftajwar/deduplicated_dapo_dataset", split="train")
     ds = ds.rename_column("answer", "solution")
-    ds = ds.map(lambda ex: build_prompt(ex, tokenizer))
+    ds = ds.map(build_prompt)
     return ds
 
 
-def load_eval_dataset(tokenizer):
+def load_eval_dataset():
     ds = load_dataset("HuggingFaceH4/MATH-500", split="test")
     ds = ds.rename_column("problem", "prompt")
     ds = ds.rename_column("answer", "solution")
-    ds = ds.map(lambda ex: build_prompt(ex, tokenizer))
+    ds = ds.map(build_prompt)
     return ds
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="GRPO training on DAPO-17k")
-    parser.add_argument("--model_name_or_path", type=str, default="Qwen/Qwen3-1.7B")
+    parser.add_argument("--model_name_or_path", type=str, default="Qwen/Qwen3-1.7B-Base")
     parser.add_argument("--output_dir", type=str, default="./output")
     parser.add_argument("--max_steps", type=int, default=-1)
     parser.add_argument("--num_train_epochs", type=int, default=1)
@@ -73,10 +71,8 @@ def parse_args():
 def main():
     args = parse_args()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-
-    train_dataset = load_train_dataset(tokenizer)
-    eval_dataset = load_eval_dataset(tokenizer)
+    train_dataset = load_train_dataset()
+    eval_dataset = load_eval_dataset()
 
     training_args = GRPOConfig(
         output_dir=args.output_dir,
