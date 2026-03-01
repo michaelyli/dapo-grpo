@@ -2,7 +2,9 @@
 
 import argparse
 
+import torch
 from datasets import load_dataset
+from peft import LoraConfig
 from transformers import AutoModelForCausalLM
 from trl import GRPOConfig, GRPOTrainer
 
@@ -66,6 +68,13 @@ def parse_args():
     parser.add_argument("--logging_steps", type=int, default=1)
     parser.add_argument("--bf16", action="store_true", default=True)
     parser.add_argument("--run_name", type=str, default=None)
+    parser.add_argument("--use_lora", action="store_true", default=False)
+    parser.add_argument("--lora_r", type=int, default=16)
+    parser.add_argument("--lora_alpha", type=int, default=64)
+    parser.add_argument("--lora_dropout", type=float, default=0.05)
+    parser.add_argument("--lora_target_modules", type=str, nargs="+",
+                        default=["q_proj", "k_proj", "v_proj", "o_proj",
+                                 "up_proj", "down_proj", "gate_proj"])
     return parser.parse_args()
 
 
@@ -107,9 +116,19 @@ def main():
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name_or_path,
-        torch_dtype="auto",
+        torch_dtype=torch.bfloat16 if args.use_lora else "auto",
         attn_implementation="flash_attention_2",
     )
+
+    peft_config = None
+    if args.use_lora:
+        peft_config = LoraConfig(
+            r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            target_modules=args.lora_target_modules,
+            task_type="CAUSAL_LM",
+        )
 
     trainer = GRPOTrainer(
         model=model,
@@ -117,6 +136,7 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         reward_funcs=[accuracy_reward],
+        peft_config=peft_config,
     )
 
     trainer.train()
