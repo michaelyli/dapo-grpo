@@ -1,6 +1,6 @@
+transformers==5.2.0
+trl==0.17.0
 torch
-transformers
-trl
 datasets
 accelerate
 wandb
