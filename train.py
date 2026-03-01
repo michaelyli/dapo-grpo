@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument("--num_train_epochs", type=int, default=1)
     parser.add_argument("--learning_rate", type=float, default=1e-6)
     parser.add_argument("--num_generations", type=int, default=8)
-    parser.add_argument("--per_device_train_batch_size", type=int, default=8)
+    parser.add_argument("--per_device_train_batch_size", type=int, default=1)
     parser.add_argument("--per_device_eval_batch_size", type=int, default=8)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=4)
     parser.add_argument("--max_completion_length", type=int, default=1360)
@@ -68,7 +68,7 @@ def parse_args():
     parser.add_argument("--logging_steps", type=int, default=1)
     parser.add_argument("--bf16", action="store_true", default=True)
     parser.add_argument("--run_name", type=str, default=None)
-    parser.add_argument("--use_lora", action="store_true", default=False)
+    parser.add_argument("--use_lora", action="store_true", default=True)
     parser.add_argument("--lora_r", type=int, default=16)
     parser.add_argument("--lora_alpha", type=int, default=64)
     parser.add_argument("--lora_dropout", type=float, default=0.05)
@@ -108,16 +108,17 @@ def main():
         eval_steps=args.eval_steps,
         eval_strategy="steps",
         logging_steps=args.logging_steps,
-        bf16=args.bf16,
+        bf16=False,
         report_to="wandb",
         run_name=args.run_name,
+        log_completions=True,
         log_on_each_node=False,
+        lr_scheduler_type="constant",
     )
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name_or_path,
-        torch_dtype=torch.bfloat16 if args.use_lora else "auto",
-        attn_implementation="flash_attention_2",
+        torch_dtype="auto",
     )
 
     peft_config = None

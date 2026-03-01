@@ -11,15 +11,14 @@ set -euo pipefail
 
 # ── Multi-GPU with accelerate ──
 accelerate launch \
-    --num_processes 8 \
-    --mixed_precision bf16 \
+    --num_processes 1 \
     train.py \
     --model_name_or_path Qwen/Qwen3-1.7B-Base \
     --output_dir ./output \
     --learning_rate 1e-6 \
     --num_generations 8 \
-    --per_device_train_batch_size 8 \
-    --gradient_accumulation_steps 4 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 64 \
     --max_completion_length 1360 \
     --max_prompt_length 256 \
     --loss_type dr_grpo \
@@ -33,5 +32,4 @@ accelerate launch \
     --adam_beta2 0.95 \
     --save_steps 100 \
     --eval_steps 100 \
-    --bf16 \
     --run_name dapo-grpo-qwen3-1.7b
